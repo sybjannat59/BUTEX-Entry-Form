@@ -1,0 +1,4 @@
+# Node dependencies for the Excel -> source-code converter
+tools/node_modules/
+node_modules/
+*.log

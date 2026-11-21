@@ -1,0 +1,12 @@
+{
+  "name": "butex-entry-form-tools",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Convert an Excel student list into the embedded students-data.js source file.",
+  "scripts": {
+    "build:data": "node excel-to-data.js"
+  },
+  "dependencies": {
+    "xlsx": "^0.18.5"
+  }
+}

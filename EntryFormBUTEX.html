@@ -730,7 +730,7 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
         </div>
         <h2>ফর্ম জেনারেট করুন</h2>
-        <p>XLSX ফাইল আপলোড করুন, তারপর স্টুডেন্ট আইডি দিয়ে খুঁজুন।</p>
+        <p>স্টুডেন্ট ডেটা সোর্স কোডে লোড করা আছে — স্টুডেন্ট আইডি দিয়ে খুঁজুন। (প্রয়োজনে XLSX আপলোড করেও ওভাররাইট করা যাবে)</p>
         <div class="grid-cols">
             <div class="col-c"><div class="col-c-dot"></div><div><div class="col-c-k">আইডি (ইংরেজি সংখ্যায়)</div><div class="col-c-v">যেমন: 2023001</div></div></div>
             <div class="col-c"><div class="col-c-dot"></div><div><div class="col-c-k">নাম (ইংরেজি বড় অক্ষরে)</div><div class="col-c-v">MD. RAHIM UDDIN</div></div></div>
@@ -816,6 +816,7 @@
     </div>
 </div>
 
+<script src="students-data.js"></script>
 <script>
 var LOGO_URL = 'https://static.vecteezy.com/system/resources/previews/067/142/737/non_2x/bangladesh-university-of-textiles-butex-logo-butex-bd-high-quality-clipart-icon-design-premium-quality-transparent-background-digital-download-free-png.png';
 var allStudents = [];
@@ -844,6 +845,11 @@ document.addEventListener('DOMContentLoaded', function(){
     if(term){
         term.innerHTML = '<option value="">টার্ম</option><option value="'+b01+'">'+b01+'</option><option value="'+b02+'">'+b02+'</option>';
     }
+});
+
+// Auto-load the student data that is embedded in the source code (students-data.js).
+document.addEventListener('DOMContentLoaded', function(){
+    loadEmbeddedData();
 });
 
 var COLUMN_MAP = {
@@ -947,6 +953,49 @@ function setStatus(type,text){
     statusTimer = setTimeout(function(){ b.className='hdr-badge'; }, 3500);
 }
 
+// ── LOAD STUDENT DATA FROM SOURCE CODE (no backend server, no file upload required) ──
+// students-data.js (loaded above) sets window.STUDENT_DATA to an array of
+// already-normalized student objects. This makes the data part of the source
+// so the app works by just opening the HTML — no server, no manual upload.
+function loadEmbeddedData(){
+    if(typeof window.STUDENT_DATA === 'undefined' || !Array.isArray(window.STUDENT_DATA) || !window.STUDENT_DATA.length){
+        return; // Nothing embedded — user can still upload an XLSX manually.
+    }
+    allStudents = window.STUDENT_DATA.map(function(rec){
+        if(rec && rec._raw === undefined) rec._raw = rec; // safety for render logic
+        return rec;
+    });
+
+    // Visually mark the XLSX box as already loaded from source code.
+    var xlsxBox = document.getElementById('xlsxBox');
+    if(xlsxBox){
+        xlsxBox.classList.add('uploaded');
+        var sub = document.getElementById('xlsxSub');
+        if(sub) sub.textContent = allStudents.length + ' জন (সোর্স কোড)';
+    }
+
+    // Prefer a curriculum list embedded separately (window.STUDENT_SUBJECTS);
+    // otherwise fall back to deriving subjects from each student's
+    // subject_code / subject_name fields.
+    if (typeof window.STUDENT_SUBJECTS !== 'undefined' && Array.isArray(window.STUDENT_SUBJECTS) && window.STUDENT_SUBJECTS.length) {
+        globalSubjects = window.STUDENT_SUBJECTS.map(function(s){
+            return { code: (s.code || '').toString().trim(), name: (s.name || '').toString().trim() };
+        });
+    } else {
+        var seen = {};
+        globalSubjects = [];
+        allStudents.forEach(function(stu){
+            var code = (stu.subject_code || '').toString().trim();
+            var name = (stu.subject_name || '').toString().trim();
+            if(!code && !name) return;
+            var key = code + '|' + name;
+            if(!seen[key]){ seen[key] = true; globalSubjects.push({code:code, name:name}); }
+        });
+    }
+
+    setStatus('success', allStudents.length + ' জন শিক্ষার্থী লোড হয়েছে (সোর্স কোড থেকে)');
+}
+
 function handleFile(e){
     var file=e.target.files[0];if(!file)return;
     setStatus('info','ফাইল পড়া হচ্ছে...');
@@ -978,7 +1027,7 @@ function handleFile(e){
 }
 
 function searchStudent(){
-    if(!allStudents.length){ setStatus('error','প্রথমে XLSX ফাইল আপলোড করুন'); return; }
+    if(!allStudents.length){ setStatus('error','প্রথমে স্টুডেন্ট ডেটা লোড করুন (সোর্স কোড বা XLSX আপলোড)'); return; }
     var meta = getFormMeta();
     if(!meta.level){ setStatus('error','লেভেল সিলেক্ট করুন'); var el=document.getElementById('levelSelect'); if(el) el.focus(); return; }
     if(!meta.term){ setStatus('error','টার্ম সিলেক্ট করুন'); var el2=document.getElementById('termSelect'); if(el2) el2.focus(); return; }
